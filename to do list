@@ -1,0 +1,75 @@
+# Import the necessary modules
+from tkinter import *
+import sqlite3 as sql
+
+# Initialize the Python To-Do List GUI window
+root = Tk()
+root.title('To-Do List')
+root.geometry('400x400')
+root.resizable(0, 0)
+root.config(bg='PaleVioletRed')
+
+# Create a database connection
+connection = sql.connect('tasks.db')
+cursor = connection.cursor()
+cursor.execute('CREATE TABLE IF NOT EXISTS tasks (title TEXT)')
+
+# Listbox to display tasks with a Scrollbar
+tasks = Listbox(root, selectbackground='Gold', bg='Silver', font=('Helvetica', 12), height=12, width=30)
+scroller = Scrollbar(root, orient=VERTICAL, command=tasks.yview)
+scroller.place(x=350, y=50, height=232)
+tasks.config(yscrollcommand=scroller.set)
+tasks.place(x=35, y=50)
+
+# Read tasks from the database and insert them into the Listbox
+cursor.execute('SELECT title FROM tasks')
+for task in cursor.fetchall():
+    tasks.insert(END, task[0])
+
+# Entry widget for adding new tasks
+new_item_entry = Entry(root, width=37)
+new_item_entry.place(x=35, y=310)
+
+# Create the Add Item button
+def add_item():
+    new_task = new_item_entry.get()
+    if new_task:
+        tasks.insert(END, new_task)
+        cursor.execute('INSERT INTO tasks (title) VALUES (?)', (new_task,))
+        connection.commit()
+        new_item_entry.delete(0, END)
+
+add_btn = Button(root, text='Add Item', bg='Azure', width=10, font=('Helvetica', 12), command=add_item)
+add_btn.place(x=45, y=350)
+
+# Create the Delete Item button
+def delete_item():
+    selected_task_index = tasks.curselection()
+    if selected_task_index:
+        task_to_delete = tasks.get(selected_task_index)
+        tasks.delete(selected_task_index)
+        cursor.execute('DELETE FROM tasks WHERE title = ?', (task_to_delete,))
+        connection.commit()
+
+delete_btn = Button(root, text='Delete Item', bg='Azure', width=10, font=('Helvetica', 12), command=delete_item)
+delete_btn.place(x=150, y=350)
+
+# Create the Update Item button (for demonstration purposes)
+def update_item():
+    selected_task_index = tasks.curselection()
+    if selected_task_index:
+        updated_task = new_item_entry.get()
+        tasks.delete(selected_task_index)
+        tasks.insert(selected_task_index, updated_task)
+        cursor.execute('UPDATE tasks SET title = ? WHERE title = ?', (updated_task, tasks.get(selected_task_index)))
+        connection.commit()
+        new_item_entry.delete(0, END)
+
+update_btn = Button(root, text='Update Item', bg='Azure', width=10, font=('Helvetica', 12), command=update_item)
+update_btn.place(x=255, y=350)
+
+# Main event loop
+root.mainloop()
+
+# Close the database connection
+connection.close()
